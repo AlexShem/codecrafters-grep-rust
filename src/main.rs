@@ -3,6 +3,11 @@ use std::io;
 use std::process;
 
 fn match_pattern(input_line: &str, pattern: &str) -> bool {
+    // Match `\d` any digit
+    if pattern.to_string() == "\\d".to_string() {
+        return input_line.chars().any(|c| c.is_ascii_digit());
+    }
+
     if pattern.chars().count() == 1 {
         input_line.contains(pattern)
     } else {
@@ -27,4 +32,14 @@ fn main() {
     } else {
         process::exit(1)
     }
+}
+
+#[cfg(test)]
+#[test]
+fn match_digits() {
+    let input_text = "apple123";
+    let pattern = "\\d";
+
+    let result = match_pattern(input_text, pattern);
+    assert!(result)
 }
