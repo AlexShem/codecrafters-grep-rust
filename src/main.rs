@@ -13,6 +13,21 @@ fn match_pattern(input_line: &str, pattern: &str) -> bool {
         return input_line.chars().any(|c| c.is_ascii_alphanumeric() || c == '_');
     }
 
+    // Match `[]` positive character group
+    if pattern.chars().nth(0).unwrap() == '[' {
+        let mut positive_chars: Vec<char> = Vec::new();
+        let mut position: usize = 1;
+        let pattern_chars: Vec<char> = pattern.chars().collect();
+        while position < pattern.len() && pattern_chars[position] != ']' {
+            positive_chars.push(pattern_chars.get(position).copied().unwrap());
+            position += 1;
+        }
+        if position < pattern_chars.len() && pattern_chars[position] == ']' {
+            return input_line.chars().any(|c| positive_chars.contains(&c));
+        }
+        return false;
+    }
+
     if pattern.chars().count() == 1 {
         input_line.contains(pattern)
     } else {
@@ -47,4 +62,22 @@ fn match_digits() {
 
     let result = match_pattern(input_text, pattern);
     assert!(result)
+}
+
+#[test]
+fn positive_character_groups_01() {
+    let input_text = "apple";
+    let pattern = "[abc]";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true)
+}
+
+#[test]
+fn positive_character_groups_02() {
+    let input_text = "[]";
+    let pattern = "[strawberry]";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, false)
 }
