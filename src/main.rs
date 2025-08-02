@@ -13,17 +13,29 @@ fn match_pattern(input_line: &str, pattern: &str) -> bool {
         return input_line.chars().any(|c| c.is_ascii_alphanumeric() || c == '_');
     }
 
-    // Match `[]` positive character group
+    // Match `[]` character group
     if pattern.chars().nth(0).unwrap() == '[' {
-        let mut positive_chars: Vec<char> = Vec::new();
+        let mut is_positive = true;
+        let mut group_chars: Vec<char> = Vec::new();
         let mut position: usize = 1;
         let pattern_chars: Vec<char> = pattern.chars().collect();
+
+        // Check if the group is negative
+        if position < pattern.len() && pattern_chars[position] == '^' {
+            is_positive = false;
+            position += 1;
+        }
+
         while position < pattern.len() && pattern_chars[position] != ']' {
-            positive_chars.push(pattern_chars.get(position).copied().unwrap());
+            group_chars.push(pattern_chars.get(position).copied().unwrap());
             position += 1;
         }
         if position < pattern_chars.len() && pattern_chars[position] == ']' {
-            return input_line.chars().any(|c| positive_chars.contains(&c));
+            return if is_positive {
+                input_line.chars().any(|c| group_chars.contains(&c))
+            } else {
+                input_line.chars().any(|c| !group_chars.contains(&c))
+            };
         }
         return false;
     }
@@ -77,6 +89,24 @@ fn positive_character_groups_01() {
 fn positive_character_groups_02() {
     let input_text = "[]";
     let pattern = "[strawberry]";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, false)
+}
+
+#[test]
+fn negative_character_groups_01() {
+    let input_text = "dog";
+    let pattern = "[^abc]";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true)
+}
+
+#[test]
+fn negative_character_groups_02() {
+    let input_text = "cab";
+    let pattern = "[^abc]";
 
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, false)
