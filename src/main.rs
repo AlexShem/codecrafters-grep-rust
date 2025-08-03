@@ -1,9 +1,9 @@
 mod matcher;
 
+use crate::matcher::RegexMatcher;
 use std::env;
 use std::io;
 use std::process;
-use crate::matcher::RegexMatcher;
 
 fn match_pattern(input_line: &str, pattern: &str) -> bool {
     if let Ok(matcher) = RegexMatcher::compile_regex(pattern) {
@@ -76,4 +76,13 @@ fn negative_character_groups_02() {
 
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, false)
+}
+
+#[test]
+fn start_of_string() {
+    let input_text = "log";
+    let pattern = "^log";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
 }

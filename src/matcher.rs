@@ -9,6 +9,9 @@ pub enum PatternElement {
 
     /// Custom character groups like `[abc]` or `[^abc]`.
     CharacterGroup { chars: Vec<char>, negated: bool },
+
+    /// Position anchors that do not consume characters
+    Anchor(AnchorType),
 }
 
 pub enum CharClass {
@@ -17,6 +20,11 @@ pub enum CharClass {
 
     /// `\w` - matches word characters (alphanumeric + `_` underscore)
     Word,
+}
+
+pub enum AnchorType {
+    StartOfString,
+    // EndOfString
 }
 
 pub struct Pattern {
@@ -39,8 +47,26 @@ impl PatternElement {
             PatternElement::CharacterClass(char_class) => char_class.matches_char(ch),
             PatternElement::CharacterGroup { chars, negated } => {
                 let contains = chars.contains(&ch);
-                if *negated { !contains } else { contains }
+                if *negated {
+                    !contains
+                } else {
+                    contains
+                }
             }
+            PatternElement::Anchor(_) => {
+                panic!("'matches_char' called on anchor element - use check_anchor instead")
+            }
+        }
+    }
+
+    pub fn is_anchor(&self) -> bool {
+        matches!(self, PatternElement::Anchor(_))
+    }
+
+    pub fn check_anchor(&self, text_pos: usize, _text_len: usize) -> bool {
+        match self {
+            PatternElement::Anchor(AnchorType::StartOfString) => text_pos == 0,
+            _ => panic!("'check_anchor' called on non-anchor element"),
         }
     }
 }
@@ -66,6 +92,12 @@ impl RegexMatcher {
     }
 
     pub fn is_match(&self, text: &str) -> bool {
+        if let Some(PatternElement::Anchor(AnchorType::StartOfString)) =
+            self.pattern.elements.first()
+        {
+            return self.match_at_position(text, 0);
+        }
+
         for start_pos in 0..=text.len() {
             if self.match_at_position(text, start_pos) {
                 return true;
@@ -99,6 +131,16 @@ impl RegexMatcher {
         }
 
         let current_element = &self.pattern.elements[patter_pos];
+
+        // Handle anchor element
+        if current_element.is_anchor() {
+            return if current_element.check_anchor(text_pos, chars.len()) {
+                self.match_elements_at_position(chars, text_pos, patter_pos + 1)
+            } else {
+                false
+            };
+        }
+
         let current_char = chars[text_pos];
 
         if current_element.matches_char(current_char) {
@@ -131,6 +173,10 @@ impl RegexParser {
         let ch = self.current_char()?;
 
         match ch {
+            '^' => {
+                self.advance();
+                Ok(PatternElement::Anchor(AnchorType::StartOfString))
+            }
             '\\' => self.parse_escape_sequence(),
             '[' => self.parse_character_group(),
             _ => {
