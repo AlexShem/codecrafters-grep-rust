@@ -1,49 +1,15 @@
+mod matcher;
+
 use std::env;
 use std::io;
 use std::process;
+use crate::matcher::RegexMatcher;
 
 fn match_pattern(input_line: &str, pattern: &str) -> bool {
-    // Match `\d` any digit
-    if pattern.to_string() == "\\d".to_string() {
-        return input_line.chars().any(|c| c.is_ascii_digit());
-    }
-
-    // Match `\w` alphanumeric character
-    if pattern.to_string() == "\\w".to_string() {
-        return input_line.chars().any(|c| c.is_ascii_alphanumeric() || c == '_');
-    }
-
-    // Match `[]` character group
-    if pattern.chars().nth(0).unwrap() == '[' {
-        let mut is_positive = true;
-        let mut group_chars: Vec<char> = Vec::new();
-        let mut position: usize = 1;
-        let pattern_chars: Vec<char> = pattern.chars().collect();
-
-        // Check if the group is negative
-        if position < pattern.len() && pattern_chars[position] == '^' {
-            is_positive = false;
-            position += 1;
-        }
-
-        while position < pattern.len() && pattern_chars[position] != ']' {
-            group_chars.push(pattern_chars.get(position).copied().unwrap());
-            position += 1;
-        }
-        if position < pattern_chars.len() && pattern_chars[position] == ']' {
-            return if is_positive {
-                input_line.chars().any(|c| group_chars.contains(&c))
-            } else {
-                input_line.chars().any(|c| !group_chars.contains(&c))
-            };
-        }
-        return false;
-    }
-
-    if pattern.chars().count() == 1 {
-        input_line.contains(pattern)
+    if let Ok(matcher) = RegexMatcher::compile_regex(pattern) {
+        matcher.is_match(input_line)
     } else {
-        panic!("Unhandled pattern: {}", pattern)
+        false
     }
 }
 
