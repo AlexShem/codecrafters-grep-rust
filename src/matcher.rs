@@ -1,4 +1,4 @@
-use crate::parser::{AnchorType, Pattern, PatternElement, RegexParser};
+use crate::parser::{AnchorType, Pattern, PatternElement, Quantifier, RegexParser};
 
 pub struct RegexMatcher {
     pattern: Pattern,
@@ -63,6 +63,10 @@ impl RegexMatcher {
         self.match_elements_at_position(&chars, start_pos, 0)
     }
 
+    /// Recursively match pattern elements against text characters
+    /// - `chars`: the text as a vector of characters
+    /// - `text_pos`: current position in the text
+    /// - `pattern_pos`: current position in the pattern
     fn match_elements_at_position(
         &self,
         chars: &Vec<char>,
@@ -84,6 +88,11 @@ impl RegexMatcher {
             };
         }
 
+        // Handle quantified elements with special repetition logic
+        if current_element.is_quantified() {
+            return self.match_quantified_element(chars, text_pos, patter_pos);
+        }
+
         // Reached the end of text but still have non-anchor pattern element - fail
         if text_pos >= chars.len() {
             return false;
@@ -96,5 +105,61 @@ impl RegexMatcher {
         } else {
             false
         }
+    }
+
+    fn match_quantified_element(
+        &self,
+        chars: &Vec<char>,
+        text_pos: usize,
+        pattern_pos: usize,
+    ) -> bool {
+        let current_element = &self.pattern.elements[pattern_pos];
+
+        if let PatternElement::Quantified {
+            element,
+            quantifier,
+        } = current_element
+        {
+            match quantifier {
+                Quantifier::Plus => {
+                    // At least one match is expected
+                    self.match_plus_quantifier(chars, text_pos, pattern_pos, element)
+                }
+            }
+        } else {
+            panic!("match_quantified_element called on non-quantified element")
+        }
+    }
+
+    fn match_plus_quantifier(
+        &self,
+        chars: &Vec<char>,
+        text_pos: usize,
+        pattern_pos: usize,
+        element: &PatternElement,
+    ) -> bool {
+        if text_pos >= chars.len() {
+            return false;
+        }
+
+        if !element.matches_char(chars[text_pos]) {
+            return false;
+        }
+
+        // Greedy algorithm: try to match as much as possible
+        let mut current_pos = text_pos + 1;
+
+        while current_pos < chars.len() && element.matches_char(chars[current_pos]) {
+            current_pos += 1;
+        }
+
+        // Backtracking
+        for try_from_pos in (text_pos + 1..=current_pos).rev() {
+            if self.match_elements_at_position(chars, try_from_pos, pattern_pos + 1) {
+                return true;
+            }
+        }
+
+        false
     }
 }

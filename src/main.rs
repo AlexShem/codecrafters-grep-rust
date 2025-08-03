@@ -114,3 +114,30 @@ fn end_of_string_03() {
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, true);
 }
+
+#[test]
+fn one_or_more_01() {
+    let input_text = "caat";
+    let pattern = "ca+t";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn one_or_more_02() {
+    let input_text = "caats";
+    let pattern = "ca+at";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn one_or_more_03() {
+    let input_text = "ca";
+    let pattern = "ca+t";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, false);
+}

@@ -12,6 +12,19 @@ pub enum PatternElement {
 
     /// Position anchors that do not consume characters
     Anchor(AnchorType),
+
+    /// Quantified element. Contains:
+    /// - `element`: `Box<PatternElement>`
+    /// - `quantifier`: `Quantifier`
+    Quantified {
+        element: Box<PatternElement>,
+        quantifier: Quantifier,
+    },
+}
+
+pub enum Quantifier {
+    /// `+` matches one or more times
+    Plus,
 }
 
 pub enum CharClass {
@@ -40,7 +53,7 @@ pub struct RegexParser {
 }
 
 impl PatternElement {
-    pub(crate) fn matches_char(&self, ch: char) -> bool {
+    pub fn matches_char(&self, ch: char) -> bool {
         match self {
             PatternElement::Literal(literal_ch) => *literal_ch == ch,
             PatternElement::CharacterClass(char_class) => char_class.matches_char(ch),
@@ -55,11 +68,16 @@ impl PatternElement {
             PatternElement::Anchor(_) => {
                 panic!("'matches_char' called on anchor element - use check_anchor instead")
             }
+            PatternElement::Quantified { element, .. } => element.matches_char(ch),
         }
     }
 
     pub fn is_anchor(&self) -> bool {
         matches!(self, PatternElement::Anchor(_))
+    }
+
+    pub fn is_quantified(&self) -> bool {
+        matches!(self, PatternElement::Quantified { .. })
     }
 
     pub fn check_anchor(&self, text_pos: usize, text_len: usize) -> bool {
@@ -88,14 +106,44 @@ impl RegexParser {
         }
     }
 
+    /// Returns the next character `Some(char)` in the input without consuming it.
+    /// If there are no more characters, returns `None`.
+    fn peek(&self) -> Option<char> {
+        if self.position < self.input.len() {
+            return Some(self.input[self.position]);
+        }
+        None
+    }
+
     pub fn parse(&mut self) -> anyhow::Result<Pattern> {
         let mut elements = Vec::new();
 
         while self.position < self.input.len() {
-            elements.push(self.parse_element()?);
+            let mut element = self.parse_element()?;
+
+            // Check if the next character is a quantifier
+            if let Some(next_char) = self.peek() {
+                if let Some(quantifier) = self.parse_quantifier(next_char) {
+                    self.advance();
+                    element = PatternElement::Quantified {
+                        element: Box::new(element),
+                        quantifier,
+                    }
+                }
+            }
+
+            elements.push(element);
         }
 
         Ok(Pattern { elements })
+    }
+
+    pub fn parse_quantifier(&self, ch: char) -> Option<Quantifier> {
+        match ch {
+            '+' => Some(Quantifier::Plus),
+            '?' => todo!("'?' Is not yet supported as a quantifier"),
+            _ => None,
+        }
     }
 
     fn parse_element(&mut self) -> anyhow::Result<PatternElement> {
