@@ -25,6 +25,9 @@ pub enum PatternElement {
 pub enum Quantifier {
     /// `+` matches one or more times
     Plus,
+
+    /// `?` matches zero or one time
+    Question,
 }
 
 pub enum CharClass {
@@ -141,7 +144,7 @@ impl RegexParser {
     pub fn parse_quantifier(&self, ch: char) -> Option<Quantifier> {
         match ch {
             '+' => Some(Quantifier::Plus),
-            '?' => todo!("'?' Is not yet supported as a quantifier"),
+            '?' => Some(Quantifier::Question),
             _ => None,
         }
     }

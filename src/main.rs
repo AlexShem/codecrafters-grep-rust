@@ -116,6 +116,15 @@ fn end_of_string_03() {
 }
 
 #[test]
+fn end_of_string_04() {
+    let input_text = "dogdogdog";
+    let pattern = "o[fg]$";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
 fn one_or_more_01() {
     let input_text = "caat";
     let pattern = "ca+t";
@@ -140,4 +149,40 @@ fn one_or_more_03() {
 
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, false);
+}
+
+#[test]
+fn one_or_more_04() {
+    let input_text = "cccccats";
+    let pattern = "c+ats$";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn zero_or_one_01() {
+    let input_text = "cats";
+    let pattern = "c?ats";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn zero_or_one_02() {
+    let input_text = "dogs";
+    let pattern = "dogs?";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn zero_or_one_03() {
+    let input_text = "dog";
+    let pattern = "dogs?";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
 }

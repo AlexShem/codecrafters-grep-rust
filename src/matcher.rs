@@ -15,6 +15,23 @@ impl RegexMatcher {
         Ok(RegexMatcher::new(parsed_pattern))
     }
 
+    fn estimate_min_pattern_len(&self) -> usize {
+        self.pattern
+            .elements
+            .iter()
+            .map(|elem| match elem {
+                PatternElement::Literal(_) => 1,
+                PatternElement::CharacterClass(_) => 1,
+                PatternElement::CharacterGroup { .. } => 1,
+                PatternElement::Anchor(_) => 0,
+                PatternElement::Quantified { quantifier, .. } => match quantifier {
+                    Quantifier::Plus => 1,
+                    Quantifier::Question => 0,
+                },
+            })
+            .sum()
+    }
+
     pub fn is_match(&self, text: &str) -> bool {
         // Handle fully-anchored pattern: `^...$`
         if let (Some(first), Some(last)) =
@@ -37,9 +54,14 @@ impl RegexMatcher {
         // Handle patterns that end with '$'
         if let Some(PatternElement::Anchor(AnchorType::EndOfString)) = self.pattern.elements.last()
         {
-            for start_pos in 0..=text.len() {
-                if self.match_at_position(text, start_pos) {
-                    return true;
+            let chars: Vec<char> = text.chars().collect();
+            let pattern_len = self.estimate_min_pattern_len();
+
+            for start_pos in 0..=chars.len() {
+                if start_pos + pattern_len <= chars.len() {
+                    if self.match_at_position(text, start_pos) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -125,6 +147,10 @@ impl RegexMatcher {
                     // At least one match is expected
                     self.match_plus_quantifier(chars, text_pos, pattern_pos, element)
                 }
+                Quantifier::Question => {
+                    // None or one match is expected
+                    self.match_question_quantifier(chars, text_pos, pattern_pos, element)
+                }
             }
         } else {
             panic!("match_quantified_element called on non-quantified element")
@@ -158,6 +184,26 @@ impl RegexMatcher {
             if self.match_elements_at_position(chars, try_from_pos, pattern_pos + 1) {
                 return true;
             }
+        }
+
+        false
+    }
+
+    fn match_question_quantifier(
+        &self,
+        chars: &Vec<char>,
+        text_pos: usize,
+        patter_pos: usize,
+        element: &Box<PatternElement>,
+    ) -> bool {
+        // Try matching zero times
+        if self.match_elements_at_position(chars, text_pos, patter_pos + 1) {
+            return true;
+        }
+
+        // Try matching exactly one occurrence
+        if text_pos < chars.len() && element.matches_char(chars[text_pos]) {
+            return self.match_elements_at_position(chars, text_pos + 1, patter_pos + 1);
         }
 
         false
