@@ -23,8 +23,11 @@ pub enum CharClass {
 }
 
 pub enum AnchorType {
+    /// `^` matches the beginning of the string
     StartOfString,
-    // EndOfString
+
+    /// `$` matches the end of the string
+    EndOfString,
 }
 
 pub struct Pattern {
@@ -63,9 +66,10 @@ impl PatternElement {
         matches!(self, PatternElement::Anchor(_))
     }
 
-    pub fn check_anchor(&self, text_pos: usize, _text_len: usize) -> bool {
+    pub fn check_anchor(&self, text_pos: usize, text_len: usize) -> bool {
         match self {
             PatternElement::Anchor(AnchorType::StartOfString) => text_pos == 0,
+            PatternElement::Anchor(AnchorType::EndOfString) => text_pos == text_len,
             _ => panic!("'check_anchor' called on non-anchor element"),
         }
     }
@@ -92,10 +96,32 @@ impl RegexMatcher {
     }
 
     pub fn is_match(&self, text: &str) -> bool {
+        // Handle fully-anchored pattern: `^...$`
+        if let (Some(first), Some(last)) =
+            (self.pattern.elements.first(), self.pattern.elements.last())
+        {
+            if matches!(first, PatternElement::Anchor(AnchorType::StartOfString))
+                && matches!(last, PatternElement::Anchor(AnchorType::EndOfString))
+            {
+                return self.match_at_position(text, 0);
+            }
+        }
+
+        // Handle patterns that start with '^'
         if let Some(PatternElement::Anchor(AnchorType::StartOfString)) =
             self.pattern.elements.first()
         {
             return self.match_at_position(text, 0);
+        }
+
+        // Handle patterns that end with '$'
+        if let Some(PatternElement::Anchor(AnchorType::EndOfString)) = self.pattern.elements.last() {
+            for start_pos in 0..=text.len() {
+                if self.match_at_position(text, start_pos) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         for start_pos in 0..=text.len() {
@@ -126,10 +152,6 @@ impl RegexMatcher {
             return true;
         }
 
-        if text_pos >= chars.len() {
-            return false;
-        }
-
         let current_element = &self.pattern.elements[patter_pos];
 
         // Handle anchor element
@@ -139,6 +161,11 @@ impl RegexMatcher {
             } else {
                 false
             };
+        }
+
+        // Reached the end of text but still have non-anchor pattern element - fail
+        if text_pos >= chars.len() {
+            return false;
         }
 
         let current_char = chars[text_pos];
@@ -176,6 +203,10 @@ impl RegexParser {
             '^' => {
                 self.advance();
                 Ok(PatternElement::Anchor(AnchorType::StartOfString))
+            }
+            '$' => {
+                self.advance();
+                Ok(PatternElement::Anchor(AnchorType::EndOfString))
             }
             '\\' => self.parse_escape_sequence(),
             '[' => self.parse_character_group(),

@@ -86,3 +86,30 @@ fn start_of_string() {
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, true);
 }
+
+#[test]
+fn end_of_string_01() {
+    let input_text = "dog";
+    let pattern = "dog$";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn end_of_string_02() {
+    let input_text = "dog";
+    let pattern = "^dog$";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn end_of_string_03() {
+    let input_text = "dog";
+    let pattern = "[fg]$";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
