@@ -186,3 +186,30 @@ fn zero_or_one_03() {
     let result = match_pattern(input_text, pattern);
     assert_eq!(result, true);
 }
+
+#[test]
+fn wildcard_01() {
+    let input_text = "cat";
+    let pattern = "c.t";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn wildcard_02() {
+    let input_text = "google";
+    let pattern = "g.+e";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, true);
+}
+
+#[test]
+fn wildcard_03() {
+    let input_text = "gol";
+    let pattern = "g.+gol";
+
+    let result = match_pattern(input_text, pattern);
+    assert_eq!(result, false);
+}

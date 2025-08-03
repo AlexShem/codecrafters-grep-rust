@@ -28,6 +28,7 @@ impl RegexMatcher {
                     Quantifier::Plus => 1,
                     Quantifier::Question => 0,
                 },
+                PatternElement::Dot => 1,
             })
             .sum()
     }

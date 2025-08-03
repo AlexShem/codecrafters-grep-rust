@@ -20,6 +20,9 @@ pub enum PatternElement {
         element: Box<PatternElement>,
         quantifier: Quantifier,
     },
+
+    /// `.` - (wildcard) matches any character except newline
+    Dot,
 }
 
 pub enum Quantifier {
@@ -72,6 +75,7 @@ impl PatternElement {
                 panic!("'matches_char' called on anchor element - use check_anchor instead")
             }
             PatternElement::Quantified { element, .. } => element.matches_char(ch),
+            PatternElement::Dot => ch != '\n',
         }
     }
 
@@ -160,6 +164,10 @@ impl RegexParser {
             '$' => {
                 self.advance();
                 Ok(PatternElement::Anchor(AnchorType::EndOfString))
+            }
+            '.' => {
+                self.advance();
+                Ok(PatternElement::Dot)
             }
             '\\' => self.parse_escape_sequence(),
             '[' => self.parse_character_group(),
