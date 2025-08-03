@@ -1,4 +1,5 @@
 mod matcher;
+mod parser;
 
 use crate::matcher::RegexMatcher;
 use std::env;
